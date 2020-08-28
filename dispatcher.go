@@ -308,6 +308,10 @@ func (proxy *ProxyHttpServer) OnResponse(conds ...RespCondition) *ProxyConds {
 	return &ProxyConds{proxy, make([]ReqCondition, 0), conds}
 }
 
+func (proxy *ProxyHttpServer) OnRequestFinished(f FuncReqFinished) {
+	proxy.reqFinished = f
+}
+
 // AlwaysMitm is a HttpsHandler that always eavesdrop https connections, for example to
 // eavesdrop all https connections to www.google.com, we can use
 //	proxy.OnRequest(goproxy.ReqHostIs("www.google.com")).HandleConnect(goproxy.AlwaysMitm)

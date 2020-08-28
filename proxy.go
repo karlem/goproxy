@@ -25,6 +25,7 @@ type ProxyHttpServer struct {
 	reqHandlers     []ReqHandler
 	respHandlers    []RespHandler
 	httpsHandlers   []HttpsHandler
+	reqFinished     FuncReqFinished
 	Tr              *http.Transport
 	// ConnectDial will be used to create TCP connections for CONNECT requests
 	// if nil Tr.Dial will be used
@@ -75,6 +76,12 @@ func (proxy *ProxyHttpServer) filterResponse(respOrig *http.Response, ctx *Proxy
 		resp = h.Handle(resp, ctx)
 	}
 	return
+}
+
+func (proxy *ProxyHttpServer) requestFinished(bytesTransefered int64, ctx *ProxyCtx) {
+	if proxy.reqFinished != nil {
+		proxy.reqFinished(bytesTransefered, ctx)
+	}
 }
 
 func removeProxyHeaders(ctx *ProxyCtx, r *http.Request) {
@@ -178,6 +185,13 @@ func (proxy *ProxyHttpServer) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		copyHeaders(w.Header(), resp.Header, proxy.KeepDestinationHeaders)
 		w.WriteHeader(resp.StatusCode)
 		nr, err := io.Copy(w, resp.Body)
+
+		// Filter out proxy auth responses
+		if resp.StatusCode != http.StatusProxyAuthRequired {
+			// Notify finished request
+			proxy.requestFinished(nr, ctx)
+		}
+
 		if err := resp.Body.Close(); err != nil {
 			ctx.Warnf("Can't close response body %v", err)
 		}

@@ -30,6 +30,8 @@ type RespHandler interface {
 // A wrapper that would convert a function to a RespHandler interface type
 type FuncRespHandler func(resp *http.Response, ctx *ProxyCtx) *http.Response
 
+type FuncReqFinished func(bytesTransferred int64, ctx *ProxyCtx)
+
 // FuncRespHandler.Handle(req,ctx) <=> FuncRespHandler(req,ctx)
 func (f FuncRespHandler) Handle(resp *http.Response, ctx *ProxyCtx) *http.Response {
 	return f(resp, ctx)

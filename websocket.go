@@ -107,15 +107,21 @@ func (proxy *ProxyHttpServer) websocketHandshake(ctx *ProxyCtx, req *http.Reques
 }
 
 func (proxy *ProxyHttpServer) proxyWebsocket(ctx *ProxyCtx, dest io.ReadWriter, source io.ReadWriter) {
-	errChan := make(chan error, 2)
+	stats := make(chan int64, 2)
+
 	cp := func(dst io.Writer, src io.Reader) {
-		_, err := io.Copy(dst, src)
-		ctx.Warnf("Websocket error: %v", err)
-		errChan <- err
+		b, err := io.Copy(dst, src)
+		if err != nil {
+			ctx.Warnf("Websocket error: %v", err)
+		}
+		stats <- b
 	}
 
 	// Start proxying websocket data
 	go cp(dest, source)
 	go cp(source, dest)
-	<-errChan
+
+	x, y := <-stats, <-stats
+
+	proxy.requestFinished(x+y, ctx)
 }
